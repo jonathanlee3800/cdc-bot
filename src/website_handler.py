@@ -6,6 +6,8 @@ import time
 from typing import Dict, Union
 
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
@@ -24,7 +26,7 @@ def convert_to_datetime(date_str: str, time_str: str = None):
 
 class handler(CDCAbstract):
     def __init__(self, login_credentials, captcha_solver, log, notification_manager, browser_config, program_config):
-        browser_type = browser_config["type"] or "firefox"
+        browser_type = browser_config["type"] or "chrome"
         headless = browser_config["headless_mode"] or False
 
         if browser_type.lower() != "firefox" and browser_type.lower() != "chrome":
@@ -63,21 +65,26 @@ class handler(CDCAbstract):
             Types.PT: self.open_practical_test_booking_page,
         }
 
-        options = browser_type.lower() == "firefox" and webdriver.FirefoxOptions() or webdriver.ChromeOptions()
+        options = browser_type.lower() == "chrome" and webdriver.ChromeOptions() or webdriver.FirefoxOptions()
         if headless:
             options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--no-proxy-server")
 
-        driver_name = "geckodriver" if browser_type.lower() == "firefox" else "chromedriver"
+        driver_name = "chromedriver" if browser_type.lower() == "chrome" else "geckodriver"
         if self.platform == "windows":
             driver_name += ".exe"
         executable_path = os.path.join("drivers", self.platform, driver_name)
+        print("The value of browser_type is:", browser_type)
 
-        if browser_type.lower() == "firefox":
-            self.driver = webdriver.Firefox(executable_path=executable_path, options=options)
+        if browser_type.lower() == "chrome":
+            self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+            # service = Service(executable_path=executable_path)
+            # self.driver = webdriver.Chrome(service=service, options=options)
+          
         else:
-            self.driver = webdriver.Chrome(executable_path=executable_path, options=options)
+            service = Service(executable_path="drivers/windows/geckodriver.exe")
+            self.driver = webdriver.Firefox(service=service, options=options)
 
         self.driver.set_window_size(1600, 768)
         super().__init__(username=self.username, password=self.password, headless=headless)
